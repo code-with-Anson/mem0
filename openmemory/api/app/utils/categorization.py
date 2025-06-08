@@ -49,17 +49,41 @@ class MemoryCategories(BaseModel):
 def get_categories_for_memory(memory: str) -> List[str]:
     """Get categories for a memory."""
     try:
-        response = openai_client.responses.parse(
+        response = openai_client.chat.completions.create(
             model=CATEGORIZATION_OPENAI_MODEL,
-            instructions=MEMORY_CATEGORIZATION_PROMPT,
-            input=memory,
+            messages=[
+                {"role": "system", "content": MEMORY_CATEGORIZATION_PROMPT},
+                {"role": "user", "content": memory},
+            ],
             temperature=0,
-            text_format=MemoryCategories,
+            response_format={"type": "json_object"},  # 如果需要JSON格式
         )
-        response_json = json.loads(response.output[0].content[0].text)
+
+        # 解析响应
+        content = response.choices[0].message.content
+        response_json = json.loads(content)
         categories = response_json["categories"]
         categories = [cat.strip().lower() for cat in categories]
-        # TODO: Validate categories later may be
         return categories
     except Exception as e:
         raise e
+
+
+# @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=15))
+# def get_categories_for_memory(memory: str) -> List[str]:
+#     """Get categories for a memory."""
+#     try:
+#         response = openai_client.responses.parse(
+#             model=CATEGORIZATION_OPENAI_MODEL,
+#             instructions=MEMORY_CATEGORIZATION_PROMPT,
+#             input=memory,
+#             temperature=0,
+#             text_format=MemoryCategories,
+#         )
+#         response_json = json.loads(response.output[0].content[0].text)
+#         categories = response_json["categories"]
+#         categories = [cat.strip().lower() for cat in categories]
+#         # TODO: Validate categories later may be
+#         return categories
+#     except Exception as e:
+#         raise e
